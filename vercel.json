@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/send-command.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "build": {
+    "includeFiles": ["package.json"]
+  }
+}
