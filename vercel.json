@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/send-command.js": {
-      "runtime": "@vercel/node@20.x" 
-    }
-  },
   "routes": [
     {
       "src": "/api/send-command",
