@@ -1,12 +1,16 @@
 {
-  "name": "nightingale-telegram-gateway",
-  "version": "1.0.0",
-  "description": "Serverless function to proxy website commands to Telegram.",
-  "scripts": {
-    "start": "echo 'No start script needed'",
-    "build": "echo 'Skipping build step...'"
-  },
-  "dependencies": {
-    "node-fetch": "^2.6.7" 
-  }
+    "name": "nightingale-telegram-gateway",
+      "version": "1.0.0",
+        "description": "Serverless function to proxy website commands to Telegram.",
+          "scripts": {
+              "start": "echo 'No start script needed'",
+                  "build": "echo 'Skipping build step...'"
+                    },
+                      "dependencies": {
+                          "node-fetch": "^2.6.7" 
+                            },
+                              "engines": {
+                                  "node": "20.x"
+                                    }
+                                    }
 }
