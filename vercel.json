@@ -3,5 +3,11 @@
     "api/send-command.js": {
       "runtime": "nodejs20.x"
     }
-  }
+  },
+  "routes": [
+    {
+      "src": "/api/send-command",
+      "dest": "/api/send-command.js"
+    }
+  ]
 }
