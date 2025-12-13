@@ -1,4 +1,4 @@
-name = "nightingale-telegram-gateway"
+name = "nightingale-gateway"
 main = "worker.js" 
 compatibility_date = "2024-05-01" 
 compatibility_flags = [ "nodejs_compat" ]
