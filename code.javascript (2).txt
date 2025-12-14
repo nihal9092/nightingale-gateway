@@ -1,0 +1,142 @@
+// worker.js - Cloudflare Worker for Nightingale Gateway
+// Handles command dispatch to Telegram, polling for responses, and webhook processing.
+
+addEventListener('fetch', event => {
+    event.respondWith(handleRequest(event.request));
+});
+
+async function handleRequest(request) {
+    const corsHeaders = {
+        'Access-Control-Allow-Origin': 'https://intelligence.unaux.com',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+    };
+
+    if (request.method === 'OPTIONS') {
+        return new Response(null, { headers: corsHeaders });
+    }
+
+    const url = new URL(request.url);
+    const botToken = TELEGRAM_BOT_TOKEN; // Set in env
+    const chatId = TELEGRAM_CHAT_ID; // Set in env
+
+    if (!botToken || !chatId) {
+        return new Response(JSON.stringify({ error: 'Server config error' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+    }
+
+    try {
+        if (request.method === 'POST') {
+            const body = await request.json();
+
+            // Check if it's a command from the website
+            if (body.command) {
+                const command = body.command.trim();
+                if (!command) {
+                    return new Response(JSON.stringify({ error: 'Missing command' }), {
+                        status: 400,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+
+                // Send to Telegram
+                const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+                const messagePayload = {
+                    chat_id: chatId,
+                    text: `<b>NIGHTINGALE C2 COMMAND</b>\n\n<b>Analyst Input:</b> <code>${command}</code>\n\n[Awaiting Team Response...]`,
+                    parse_mode: 'HTML',
+                };
+
+                const telegramResponse = await fetch(telegramUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(messagePayload),
+                });
+
+                if (!telegramResponse.ok) {
+                    return new Response(JSON.stringify({ error: 'Failed to send to Telegram' }), {
+                        status: 502,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    });
+                }
+
+                const telegramData = await telegramResponse.json();
+                const messageId = telegramData.result.message_id;
+                const commandId = Date.now().toString();
+
+                // Store in KV: key = commandId, value = { messageId, command, response: null }
+                await KV.put(commandId, JSON.stringify({ messageId, command, response: null }));
+
+                return new Response(JSON.stringify({ status: 'Dispatched', command_id: commandId }), {
+                    status: 200,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
+            }
+
+            // Check if it's a Telegram webhook update
+            if (body.update_id) {
+                // Process Telegram update (reply to command)
+                const update = body;
+                if (update.message && update.message.reply_to_message) {
+                    const replyToId = update.message.reply_to_message.message_id;
+                    const replyText = update.message.text;
+
+                    // Find the command in KV by messageId
+                    const keys = await KV.list();
+                    for (const key of keys.keys) {
+                        const data = JSON.parse(await KV.get(key.name));
+                        if (data.messageId === replyToId) {
+                            data.response = replyText;
+                            await KV.put(key.name, JSON.stringify(data));
+                            break;
+                        }
+                    }
+                }
+
+                return new Response('OK', { status: 200, headers: corsHeaders });
+            }
+
+            return new Response(JSON.stringify({ error: 'Invalid POST body' }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+        }
+
+        if (request.method === 'GET') {
+            const commandId = url.searchParams.get('command_id');
+            if (!commandId) {
+                return new Response(JSON.stringify({ error: 'Missing command_id' }), {
+                    status: 400,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
+            }
+
+            const data = await KV.get(commandId);
+            if (!data) {
+                return new Response(JSON.stringify({ response: null }), {
+                    status: 200,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                });
+            }
+
+            const parsed = JSON.parse(data);
+            return new Response(JSON.stringify({ response: parsed.response }), {
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+        }
+
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+            status: 405,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+    } catch (error) {
+        console.error(error);
+        return new Response(JSON.stringify({ error: 'Internal error' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+    }
+}
