@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 # Bind your KV namespace (replace 'your-kv-id' with the actual ID from 'wrangler kv:namespace create')
 kv_namespaces = [
-  { binding = "KV", id = "your-kv-id" }
+  { binding = "KV", id = "84865a49858e48dc845414b431fdad9f" }
 ]
 
 # Environment variables (set via 'wrangler secret put TELEGRAM_BOT_TOKEN' and 'wrangler secret put TELEGRAM_CHAT_ID')
